@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { birthdayConfig } from './data/birthdayConfig';
 import { PetalsBackground } from './components/PetalsBackground';
 import { Navigation } from './components/Navigation';
 import { AudioPlayer } from './components/AudioPlayer';
@@ -13,10 +14,43 @@ import { Section8Surprise } from './sections/Section8Surprise';
 import { Section9Closing } from './sections/Section9Closing';
 
 export const App: React.FC = () => {
+  const { recipient } = birthdayConfig;
+  const birthdayStartMs = new Date(`${recipient.birthdayDateStr}T00:00:00+05:30`).getTime();
+
+  // Check if birthday has arrived (or if preview mode is active in URL or state)
+  const [isBirthdayReached, setIsBirthdayReached] = useState<boolean>(() => {
+    return Date.now() >= birthdayStartMs;
+  });
+
+  const [previewBypass, setPreviewBypass] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('preview') === 'true';
+    }
+    return false;
+  });
+
   const [isOpened, setIsOpened] = useState<boolean>(false);
+
+  const isUnlocked = isBirthdayReached || previewBypass;
+
+  useEffect(() => {
+    const checkBirthday = () => {
+      const arrived = Date.now() >= birthdayStartMs;
+      setIsBirthdayReached(arrived);
+    };
+
+    checkBirthday();
+    const interval = setInterval(checkBirthday, 1000);
+    return () => clearInterval(interval);
+  }, [birthdayStartMs]);
 
   const handleOpen = () => {
     setIsOpened(true);
+  };
+
+  const handleBypassLock = () => {
+    setPreviewBypass(true);
   };
 
   const handleReplay = () => {
@@ -25,20 +59,52 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cream text-deepBlack font-sans relative selection:bg-blush selection:text-deepBlack">
+      {/* Floating Rose Petals & Golden Sparkles Background */}
       <PetalsBackground />
-      <Navigation />
+
+      {/* Floating Navigation Menu & Progress (Active once unlocked) */}
+      {isUnlocked && <Navigation />}
+
+      {/* Floating Ambient Music Audio Player */}
       <AudioPlayer />
 
       <main>
-        <Section1Opening onOpen={handleOpen} isOpened={isOpened} />
-        <Section2Hero />
-        <Section3SisterBond />
-        <Section4CreativeSoul />
-        <Section5Gallery />
-        <Section6Letter />
-        <Section7Countdown />
-        <Section8Surprise />
-        <Section9Closing onReplay={handleReplay} />
+        {/* Section 1: The Opening Gift + LIVE COUNTDOWN TIMER & LOCK */}
+        <Section1Opening
+          onOpen={handleOpen}
+          isOpened={isOpened}
+          isUnlocked={isUnlocked}
+          onBypassLock={handleBypassLock}
+        />
+
+        {/* Further sections: STRICTLY LOCKED until birthday arrives or preview bypass is used */}
+        {isUnlocked && (
+          <div className="animate-unfold">
+            {/* Section 2: Happy 20th Birthday, Gaytri */}
+            <Section2Hero />
+
+            {/* Section 3: “तू आहेस, म्हणून एकटं वाटत नाही” */}
+            <Section3SisterBond />
+
+            {/* Section 4: “तुझ्या कल्पनांचं सुंदर जग” (Creative Soul) */}
+            <Section4CreativeSoul />
+
+            {/* Section 5: The Photo Gallery */}
+            <Section5Gallery />
+
+            {/* Section 6: “एक पत्र, फक्त तुझ्यासाठी” (Interactive Handwritten Letter) */}
+            <Section6Letter />
+
+            {/* Section 7: The Birthday Countdown */}
+            <Section7Countdown />
+
+            {/* Section 8: The Secret Surprise */}
+            <Section8Surprise />
+
+            {/* Section 9: The Final Page */}
+            <Section9Closing onReplay={handleReplay} />
+          </div>
+        )}
       </main>
     </div>
   );
